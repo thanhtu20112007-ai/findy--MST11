@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Findy App - Do Not Disturb & Full Features</title>
+<style>
+/* CSS CƠ BẢN & KHUNG ĐIỆN THOẠI */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #e0e5ec; padding: 20px; }
+.phone-mockup { width: 400px; height: 900px; background-color: #fff; border: 12px solid #333; border-radius: 40px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.2); overflow: hidden; display: flex; flex-direction: column; }
+.phone-notch { width: 140px; height: 25px; background-color: #333; position: absolute; top: 0; left: 50%; transform: translateX(-50%); border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; z-index: 100; }
+
+/* KHU VỰC NỘI DUNG */
+.app-container { flex: 1; background-color: #f8f9fa; overflow-y: auto; position: relative; padding-bottom: 70px; }
+.screen { display: none; padding-top: 35px; animation: fadeIn 0.3s ease; }
+.screen.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* HEADER */
+.header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; position: relative; background: #fff; z-index: 10; top: 0; position: sticky; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
+.header h1 { font-size: 20px; font-weight: 600; color: #333; margin: auto; }
+.back-btn { position: absolute; left: 20px; font-size: 20px; font-weight: bold; cursor: pointer; color: #555; }
+
+/* DANH SÁCH THIẾT BỊ & THÔNG BÁO */
+.device-list, .menu-list { padding: 15px 20px; }
+.device-item, .menu-item { background: #fff; border-radius: 12px; padding: 12px 15px; margin-bottom: 10px; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.04); transition: 0.3s; cursor: pointer;}
+.device-item:active, .menu-item:active { transform: scale(0.98); }
+.menu-item { border-left: 4px solid transparent; justify-content: space-between; }
+.device-icon, .menu-icon { font-size: 20px; margin-right: 15px; background: #f0f0f0; width: 40px; height: 40px; border-radius: 10px; display: flex; justify-content: center; align-items: center; transition: 0.3s; flex-shrink: 0;}
+.menu-icon { background: transparent; width: auto; font-size: 22px;}
+.device-info, .menu-text { flex: 1; }
+.device-name, .menu-text { font-weight: bold; font-size: 14px; color: #333;}
+.device-status, .menu-sub { font-size: 11px; color: #888; margin-top: 3px; transition: 0.3s; display: block; font-weight: normal; line-height: 1.4;}
+.menu-arrow { color: #ccc; font-size: 18px; margin-left: 10px;}
+
+/* CSS BLUETOOTH, TÌM & NÚT DỪNG */
+.btn-bluetooth { width: 100%; background-color: #0984e3; color: white; border: none; padding: 15px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(9, 132, 227, 0.3); margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
+.btn-secondary { background-color: #fff; color: #2ecc71; border: 2px dashed #2ecc71; box-shadow: none; margin-top: 10px; }
+#btn-stop-alarm { display: none; background-color: #e74c3c; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3); animation: pulseRed 1s infinite; }
+@keyframes pulseRed { 0% { transform: scale(1); } 50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(231, 76, 60, 0.6); } 100% { transform: scale(1); } }
+.radar-animation { display: none; width: 50px; height: 50px; border-radius: 50%; border: 2px solid #0984e3; margin: 20px auto; animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
+@keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+
+/* CSS TOGGLE & DROPDOWN */
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+.toggle-switch input:checked + .slider { background-color: #2ecc71; }
+.toggle-switch input:checked + .slider:before { transform: translateX(20px); }
+.ringtone-select { appearance: none; -webkit-appearance: none; background: transparent; border: none; font-size: 14px; color: #2ecc71; font-weight: bold; text-align: right; cursor: pointer; outline: none; padding-right: 10px;}
+
+/* CSS DND MODAL (BOTTOM SHEET) */
+.modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; flex-direction: column; justify-content: flex-end; opacity: 0; pointer-events: none; transition: 0.3s; border-radius: 28px; }
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.bottom-sheet { background: #fff; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); padding-bottom: 20px; }
+.modal-overlay.active .bottom-sheet { transform: translateY(0); }
+.dnd-option { padding: 15px 20px; border-bottom: 1px solid #f0f0f0; text-align: center; cursor: pointer; font-size: 15px; color: #333; transition: 0.2s;}
+.dnd-option:active { background: #f9f9f9; }
+.dnd-cancel { padding: 15px; text-align: center; color: #e74c3c; font-weight: bold; cursor: pointer; }
+
+/* CSS TÀI KHOẢN */
+.auth-form { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+.auth-input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+.auth-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+.btn-login { background-color: #2ecc71; color: white; margin-bottom: 10px; }
+.btn-register { background-color: #fff; color: #2ecc71; border: 1px solid #2ecc71; }
+
+/* BOTTOM NAV */
+.bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; background: #fff; display: flex; justify-content: space-around; padding: 12px 0 20px 0; border-top: 1px solid #eaeaea; z-index: 50; }
+.nav-item { display: flex; flex-direction: column; align-items: center; color: #a0a0a0; font-size: 11px; cursor: pointer; width: 25%; }
+.nav-item.active { color: #2ecc71; }
+.nav-icon { font-size: 22px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="phone-mockup">
+    <div class="phone-notch"></div>
+    
+    <div id="dnd-modal" class="modal-overlay">
+        <div class="bottom-sheet">
+            <h3 style="padding: 15px 20px; border-bottom: 1px solid #eee; text-align: center; font-size: 16px; color: #555;">Tắt thông báo trong</h3>
+            <div class="dnd-option" data-time="1 giờ">1 giờ</div>
+            <div class="dnd-option" data-time="4 giờ">4 giờ</div>
+            <div class="dnd-option" data-time="8 giờ">8 giờ</div>
+            <div class="dnd-option" data-time="12 giờ">12 giờ</div>
+            <div class="dnd-option" data-time="24 giờ">24 giờ</div>
+            <div class="dnd-option" data-time="Cho đến khi chọn lại">Cho đến khi chọn lại</div>
+            <div class="dnd-cancel" id="btn-close-dnd">Hủy</div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <div id="screen-devices" class="screen active">
+            <div class="header"><h1>Thiết bị của tôi</h1></div>
+            <div class="device-list" id="main-device-list">
+                <div class="device-item"><div class="device-icon">🪪</div><div class="device-info"><div class="device-name">Ví da thật</div><div class="device-status">Gần đây • An toàn</div></div></div>
+                <div class="device-item"><div class="device-icon">🔑</div><div class="device-info"><div class="device-name">Chìa khóa xe máy</div><div class="device-status">Cách 5m • An toàn</div></div></div>
+                <div class="device-item"><div class="device-icon">🎒</div><div class="device-info"><div class="device-name">Balo đi học</div><div class="device-status">Cách 12m • Đang ở nhà</div></div></div>
+                <div class="device-item"><div class="device-icon">🎧</div><div class="device-info"><div class="device-name">Tai nghe Không dây</div><div class="device-status">Đã ngắt kết nối 2h trước</div></div></div>
+                <div class="device-item"><div class="device-icon">💻</div><div class="device-info"><div class="device-name">Laptop cá nhân</div><div class="device-status">Gần đây • An toàn</div></div></div>
+                <div class="device-item"><div class="device-icon">🐶</div><div class="device-info"><div class="device-name">Vòng cổ Cún cưng</div><div class="device-status">Cách 20m • Chú ý</div></div></div>
+                <div class="device-item"><div class="device-icon">🚲</div><div class="device-info"><div class="device-name">Xe đạp thể thao</div><div class="device-status">Đang ở trường</div></div></div>
+                <div class="device-item"><div class="device-icon">🌂</div><div class="device-info"><div class="device-name">Ô che mưa</div><div class="device-status">Không xác định vị trí</div></div></div>
+            </div>
+        </div>
+
+        <div id="screen-device-detail" class="screen">
+            <div class="header"><span class="back-btn" id="back-from-detail">❮</span><h1 id="detail-title">Tên thiết bị</h1></div>
+            <div style="text-align: center; padding: 30px 20px;">
+                <div id="detail-icon" style="font-size: 50px; background: #fff; width: 100px; height: 100px; border-radius: 25px; display: flex; justify-content: center; align-items: center; margin: 0 auto; box-shadow: 0 10px 20px rgba(0,0,0,0.05);">📱</div>
+                <div id="detail-status" style="color: #2ecc71; font-size: 14px; font-weight: bold; margin-top: 15px;">Đang kết nối</div>
+            </div>
+            <div class="menu-list">
+                <div class="menu-item" style="cursor: default;">
+                    <span class="menu-icon">🔔</span>
+                    <span class="menu-text">Nhận thông báo <span class="menu-sub">Cảnh báo ngay khi bỏ quên</span></span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-notif" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="menu-item" id="btn-open-dnd">
+                    <span class="menu-icon">🔕</span>
+                    <span class="menu-text">Không làm phiền <span class="menu-sub" id="dnd-status-text" style="color: #e74c3c; font-weight: bold;">Đang tắt</span></span>
+                    <span class="menu-arrow">›</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-find" class="screen">
+            <div class="header"><h1>Tìm thiết bị</h1></div>
+            <div style="padding: 20px;">
+                <p style="text-align:center; color:#888; font-size:13px; margin-bottom: 20px;">Mở Bluetooth để kết nối test cảnh báo ngắt khoảng cách.</p>
+                <button id="btn-connect-ble" class="btn-bluetooth"><span>📡 Kết nối Bluetooth Mới</span></button>
+                <button id="btn-stop-alarm" class="btn-bluetooth"><span>🛑 DỪNG BÁO ĐỘNG</span></button>
+                <div id="radar" class="radar-animation"></div>
+                <h3 style="font-size:15px; color:#555; margin-bottom:10px;">Thiết bị đang theo dõi sát:</h3>
+                <div class="device-list" style="padding: 0;" id="tracked-device-list">
+                    <div class="device-item" style="border: 1px solid #ffeaa7;"><div class="device-icon">🔑</div><div class="device-info"><div class="device-name">Chìa khóa nhà</div><div class="device-status" style="color:#d35400;">Đang quét vị trí...</div></div></div>
+                    <div class="device-item" style="border: 1px solid #81ecec;"><div class="device-icon">🧳</div><div class="device-info"><div class="device-name">Vali du lịch</div><div class="device-status" style="color:#00cec9;">Đã cập nhật 1p trước</div></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-notifications" class="screen">
+            <div class="header"><h1>Thông báo</h1></div>
+            <div class="menu-list">
+                <div class="menu-item" style="border-left-color: #e74c3c;"><span class="menu-icon">⚠️</span><span class="menu-text">Cảnh báo bỏ quên <span class="menu-sub">Bạn đang rời xa "Ví da thật" (15m) • Vừa xong</span></span></div>
+                <div class="menu-item" style="border-left-color: #f39c12;"><span class="menu-icon">🔋</span><span class="menu-text">Pin yếu <span class="menu-sub">Tag "Chìa khóa xe máy" còn 10% • 10 phút trước</span></span></div>
+                <div class="menu-item" style="border-left-color: #3498db;"><span class="menu-icon">📍</span><span class="menu-text">Cập nhật vị trí <span class="menu-sub">"Balo đi học" đang ở Khuôn viên Trường • 1 giờ trước</span></span></div>
+                <div class="menu-item" style="border-left-color: #2ecc71;"><span class="menu-icon">✅</span><span class="menu-text">Đã kết nối lại <span class="menu-sub">"Tai nghe Không dây" đã vào vùng phủ sóng • 2 giờ trước</span></span></div>
+                <div class="menu-item" style="border-left-color: #9b59b6;"><span class="menu-icon">🆕</span><span class="menu-text">Thiết bị mới <span class="menu-sub">"Laptop cá nhân" đã được ghép nối • Hôm qua</span></span></div>
+                </div>
+        </div>
+
+        <div id="screen-settings" class="screen">
+            <div class="header"><h1>Cài đặt</h1></div>
+            <div class="menu-list">
+                <div class="menu-item" id="open-safezone-btn"><span class="menu-icon">🏠</span><span class="menu-text">Vùng an toàn (Wifi) <span class="menu-sub">Không báo động khi ở nhà</span></span><span class="menu-arrow">›</span></div>
+                <div class="menu-item" style="cursor: default;"><span class="menu-icon">🔊</span><span class="menu-text">Âm lượng & Chuông <span class="menu-sub">Chỉnh tiếng kêu của tag</span></span>
+                    <select class="ringtone-select" id="ringtone-picker">
+                        <option value="1">Tiếng bíp chuẩn</option>
+                        <option value="2">Chuông cảnh báo</option>
+                        <option value="3">Tiếng còi hú</option>
+                    </select>
+                </div>
+                <div class="menu-item" style="cursor: default;"><span class="menu-icon">⚡</span><span class="menu-text">Chế độ tiết kiệm pin <span class="menu-sub">Giảm tần suất cập nhật vị trí</span></span><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+                <div class="menu-item" id="open-account-btn"><span class="menu-icon">👤</span><span class="menu-text">Tài khoản & Thiết bị <span class="menu-sub">Chưa đăng nhập</span></span><span class="menu-arrow">›</span></div>
+            </div>
+        </div>
+
+        <div id="screen-safezone" class="screen">
+            <div class="header"><span class="back-btn" id="back-from-safezone">❮</span><h1>Vùng an toàn</h1></div>
+            <div style="padding: 10px 20px; text-align: center; color: #7f8c8d; font-size: 13px;">Tạm tắt còi báo động khi bạn kết nối với các Wi-Fi này.</div>
+            <div class="menu-list">
+                <div class="menu-item" style="cursor: default;"><span class="menu-icon" style="color: #3498db;">🏠</span><span class="menu-text">Wi-Fi Ở Nhà <span class="menu-sub">Home_Network_5G</span></span><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+                <div class="menu-item" style="cursor: default;"><span class="menu-icon" style="color: #e67e22;">🏫</span><span class="menu-text">Trường VKU <span class="menu-sub">VKU_Student_Wifi</span></span><label class="toggle-switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+            </div>
+        </div>
+
+        <div id="screen-account" class="screen">
+            <div class="header"><span class="back-btn" id="back-from-account">❮</span><h1>Tài khoản</h1></div>
+            <div style="text-align: center; margin-top: 20px;"><div style="font-size: 50px;">👤</div><h3 style="color: #333; margin-top: 10px;">Chào mừng đến Findy</h3></div>
+            <form class="auth-form" onsubmit="event.preventDefault(); alert('Chức năng đang phát triển!');">
+                <input type="text" class="auth-input" placeholder="Tên đăng nhập" required><input type="password" class="auth-input" placeholder="Mật khẩu" required>
+                <button type="submit" class="auth-btn btn-login">Đăng nhập</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" data-target="screen-devices"><div class="nav-icon">🛡️</div><span>Thiết bị</span></div>
+        <div class="nav-item" data-target="screen-find"><div class="nav-icon">🔍</div><span>Tìm</span></div>
+        <div class="nav-item" data-target="screen-notifications"><div class="nav-icon">🔔</div><span>Thông báo</span></div>
+        <div class="nav-item" data-target="screen-settings"><div class="nav-icon">⚙️</div><span>Cài đặt</span></div>
+    </div>
+</div>
+
+<script>
+    // --- 1. CHUYỂN TAB ĐIỀU HƯỚNG ---
+    const navItems = document.querySelectorAll('.nav-item');
+    const screens = document.querySelectorAll('.screen');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+            screens.forEach(screen => screen.classList.remove('active'));
+            document.getElementById(item.getAttribute('data-target')).classList.add('active');
+        });
+    });
+
+    // --- 2. LOGIC ĐÓNG / MỞ CÁC MÀN HÌNH PHỤ TỪ CÀI ĐẶT ---
+    document.getElementById('open-account-btn').addEventListener('click', () => { document.getElementById('screen-settings').classList.remove('active'); document.getElementById('screen-account').classList.add('active'); });
+    document.getElementById('back-from-account').addEventListener('click', () => { document.getElementById('screen-account').classList.remove('active'); document.getElementById('screen-settings').classList.add('active'); });
+    document.getElementById('open-safezone-btn').addEventListener('click', () => { document.getElementById('screen-settings').classList.remove('active'); document.getElementById('screen-safezone').classList.add('active'); });
+    document.getElementById('back-from-safezone').addEventListener('click', () => { document.getElementById('screen-safezone').classList.remove('active'); document.getElementById('screen-settings').classList.add('active'); });
+
+    // --- 3. TÍNH NĂNG MỚI: CHI TIẾT THIẾT BỊ & KHÔNG LÀM PHIỀN (DND) ---
+    const screenDevices = document.getElementById('screen-devices');
+    const screenDetail = document.getElementById('screen-device-detail');
+    const dndModal = document.getElementById('dnd-modal');
+    const toggleNotif = document.getElementById('toggle-notif');
+    const dndStatusText = document.getElementById('dnd-status-text');
+
+    // Bắt sự kiện click vào bất kỳ thiết bị nào trong danh sách chính
+    document.getElementById('main-device-list').addEventListener('click', (e) => {
+        const item = e.target.closest('.device-item');
+        if (item) {
+            // Lấy thông tin thiết bị để hiển thị qua màn hình chi tiết
+            const name = item.querySelector('.device-name').innerText;
+            const iconHTML = item.querySelector('.device-icon').innerHTML;
+            const statusColor = item.querySelector('.device-status').style.color || '#888';
+            const statusText = item.querySelector('.device-status').innerText;
+
+            document.getElementById('detail-title').innerText = name;
+            document.getElementById('detail-icon').innerHTML = iconHTML;
+            document.getElementById('detail-status').innerText = statusText;
+            document.getElementById('detail-status').style.color = statusColor;
+
+            screenDevices.classList.remove('active');
+            screenDetail.classList.add('active');
+        }
+    });
+
+    // Nút Quay lại từ màn hình chi tiết
+    document.getElementById('back-from-detail').addEventListener('click', () => {
+        screenDetail.classList.remove('active');
+        screenDevices.classList.add('active');
+    });
+
+    // Mở Modal chọn giờ Không làm phiền
+    document.getElementById('btn-open-dnd').addEventListener('click', () => {
+        dndModal.classList.add('active');
+    });
+
+    // Đóng Modal Không làm phiền
+    document.getElementById('btn-close-dnd').addEventListener('click', () => {
+        dndModal.classList.remove('active');
+    });
+
+    // Khi chọn một khoảng thời gian trong Modal
+    document.querySelectorAll('.dnd-option').forEach(option => {
+        option.addEventListener('click', (e) => {
+            const timeSelected = e.target.getAttribute('data-time');
+            dndStatusText.innerText = timeSelected;           // Cập nhật chữ DND
+            dndStatusText.style.color = '#f39c12';            // Đổi màu cam cảnh báo
+            toggleNotif.checked = false;                      // TỰ ĐỘNG TẮT NÚT THÔNG BÁO
+            dndModal.classList.remove('active');
+        });
+    });
+
+    // Khi gạt nút Nhận Thông Báo
+    toggleNotif.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            // Nếu bật thông báo -> Tự động hủy Không làm phiền
+            dndStatusText.innerText = "Đang tắt";
+            dndStatusText.style.color = '#e74c3c'; 
+        } else {
+            // Nếu tắt thủ công -> Tương đương chế độ vô thời hạn
+            dndStatusText.innerText = "Cho đến khi chọn lại";
+            dndStatusText.style.color = '#f39c12';
+        }
+    });
+
+    // --- 4. BLUETOOTH & ÂM THANH BÁO ĐỘNG ĐỘNG (GIỮ NGUYÊN) ---
+    let audioCtx, masterGain, isSirenPlaying = false, sirenInterval, checkConnectionInterval, currentDevice = null, isDisconnectHandled = false;
+    const btnConnectBle = document.getElementById('btn-connect-ble');
+    const btnStopAlarm = document.getElementById('btn-stop-alarm');
+    const radarAnim = document.getElementById('radar');
+    const ringtonePicker = document.getElementById('ringtone-picker');
+
+    function initSilentAudio() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0; 
+        masterGain.connect(audioCtx.destination);
+        const silentOsc = audioCtx.createOscillator();
+        silentOsc.connect(masterGain);
+        silentOsc.start();
+        silentOsc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function playSirenAlarm() {
+        if (isSirenPlaying) return;
+        isSirenPlaying = true;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        masterGain.gain.value = 1; 
+        
+        document.querySelectorAll('.tracking-status').forEach(el => { el.innerHTML = 'ĐÃ NGẮT KẾT NỐI!'; el.style.color = '#e74c3c'; });
+        document.querySelectorAll('.dynamic-ble-tag').forEach(el => { el.style.border = '2px solid #e74c3c'; el.style.background = '#fff0f0'; el.querySelector('.device-icon').style.background = '#e74c3c'; });
+        btnConnectBle.style.display = 'none'; btnStopAlarm.style.display = 'flex';
+
+        sirenInterval = setInterval(() => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+            const now = audioCtx.currentTime;
+            const soundType = ringtonePicker.value;
+
+            if (soundType === "1") {
+                oscillator.type = 'sine'; oscillator.frequency.value = 1000;
+                gainNode.gain.setValueAtTime(1, now); gainNode.gain.setValueAtTime(0, now + 0.1); 
+                oscillator.start(now); oscillator.stop(now + 0.1);
+            } else if (soundType === "2") {
+                oscillator.type = 'square'; oscillator.frequency.setValueAtTime(800, now); oscillator.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+                gainNode.gain.setValueAtTime(1, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                oscillator.start(now); oscillator.stop(now + 0.4);
+            } else if (soundType === "3") {
+                oscillator.type = 'triangle'; oscillator.frequency.setValueAtTime(600, now); oscillator.frequency.linearRampToValueAtTime(1500, now + 0.25); oscillator.frequency.linearRampToValueAtTime(600, now + 0.5);
+                gainNode.gain.setValueAtTime(1, now); oscillator.start(now); oscillator.stop(now + 0.5);
+            }
+        }, 500);
+    }
+
+    btnStopAlarm.addEventListener('click', () => {
+        clearInterval(sirenInterval);
+        if (masterGain) masterGain.gain.value = 0; 
+        isSirenPlaying = false; isDisconnectHandled = false;
+        document.querySelectorAll('.dynamic-ble-tag').forEach(el => el.remove());
+        btnStopAlarm.style.display = 'none'; btnConnectBle.style.display = 'flex'; btnConnectBle.innerHTML = '📡 Kết nối Bluetooth Mới';
+    });
+
+    btnConnectBle.addEventListener('click', async () => {
+        if (!navigator.bluetooth) { alert('Trình duyệt không hỗ trợ Web Bluetooth API.'); return; }
+        initSilentAudio(); if (audioCtx.state === 'suspended') await audioCtx.resume();
+        document.querySelectorAll('.dynamic-ble-tag').forEach(el => el.remove());
+        if (checkConnectionInterval) clearInterval(checkConnectionInterval);
+        isDisconnectHandled = false;
+        if (currentDevice && currentDevice.gatt.connected) currentDevice.gatt.disconnect(); 
+        radarAnim.style.display = 'block'; btnConnectBle.innerHTML = 'Đang quét...';
+
+        try {
+            const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ['generic_access'] });
+            currentDevice = device;
+            const server = await device.gatt.connect();
+            let pingChar = null;
+            try {
+                const service = await server.getPrimaryService('generic_access');
+                const characteristics = await service.getCharacteristics();
+                if (characteristics.length > 0) pingChar = characteristics[0]; 
+            } catch(e) {}
+
+            radarAnim.style.display = 'none'; btnConnectBle.innerHTML = `Đang theo dõi: ${device.name || 'Thiết bị'}`;
+
+            const deviceHTML = `
+                <div class="device-item dynamic-ble-tag" style="border: 2px solid #2ecc71; background: #f0fdf4;">
+                    <div class="device-icon" style="background:#2ecc71; color:white;">📱</div>
+                    <div class="device-info">
+                        <div class="device-name">${device.name || 'Điện thoại Test'}</div>
+                        <div class="device-status tracking-status" style="color:#27ae60; font-weight: bold;">Đang kết nối BLE & Theo dõi</div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('main-device-list').insertAdjacentHTML('afterbegin', deviceHTML);
+            document.getElementById('tracked-device-list').insertAdjacentHTML('afterbegin', deviceHTML);
+
+            const handleDisconnect = () => {
+                if (isDisconnectHandled) return; isDisconnectHandled = true;
+                if (checkConnectionInterval) clearInterval(checkConnectionInterval);
+                
+                // KIỂM TRA: NẾU THÔNG BÁO BỊ TẮT (HOẶC DANG BẬT DND) THÌ BỎ QUA VIỆC HÚ CÒI
+                if (!document.getElementById('toggle-notif').checked) {
+                    alert('Đã mất kết nối, nhưng còi báo động bị tắt do bạn đang bật chế độ Không Làm Phiền.');
+                    btnConnectBle.innerHTML = '📡 Kết nối Bluetooth Mới';
+                    document.querySelectorAll('.dynamic-ble-tag').forEach(el => el.remove());
+                    return;
+                }
+                playSirenAlarm();
+            };
+
+            device.addEventListener('gattserverdisconnected', handleDisconnect);
+
+            checkConnectionInterval = setInterval(async () => {
+                if (!device.gatt.connected) { handleDisconnect(); return; }
+                if (pingChar && !isDisconnectHandled) {
+                    try { await pingChar.readValue(); } 
+                    catch (error) {
+                        if (currentDevice.gatt.connected) currentDevice.gatt.disconnect();
+                        handleDisconnect();
+                    }
+                }
+            }, 1000);
+
+        } catch (error) {
+            radarAnim.style.display = 'none'; btnConnectBle.innerHTML = '📡 Kết nối Bluetooth Mới';
+        }
+    });
+</script>
+
+</body>
+</html>
